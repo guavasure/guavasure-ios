@@ -20,6 +20,9 @@ enum GuavaSureUrlBuilder {
            !externalId.isEmpty {
             params["partner-external-id"] = externalId
         }
+        if config.enableCameraCapture {
+            params["enable-camera-capture"] = "true"
+        }
 
         if let host = config.localDevHost?.trimmingCharacters(in: .whitespacesAndNewlines), !host.isEmpty {
             var components = URLComponents()
