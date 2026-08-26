@@ -310,13 +310,25 @@ public final class GuavaSureEmbedViewController: UIViewController {
             return
         }
 
+        resolveCameraPermissionAfterStatusCheck(requestId: requestId)
+    }
+
+    private func resolveCameraPermissionAfterStatusCheck(requestId: String) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             resolveCameraPermission(requestId: requestId, outcome: "granted")
         case .denied, .restricted:
             resolveCameraPermission(requestId: requestId, outcome: "permission_permanently_denied")
         case .notDetermined:
-            resolveCameraPermission(requestId: requestId, outcome: "permission_denied")
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.resolveCameraPermission(
+                        requestId: requestId,
+                        outcome: granted ? "granted" : "permission_denied"
+                    )
+                }
+            }
         @unknown default:
             resolveCameraPermission(requestId: requestId, outcome: "permission_denied")
         }
@@ -333,11 +345,33 @@ public final class GuavaSureEmbedViewController: UIViewController {
             return
         }
 
-        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-            resolveCameraCapture(requestId: requestId, payload: nil, error: "permission_denied")
+        let authStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        if authStatus == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if granted {
+                        self.presentCameraPicker(requestId: requestId)
+                    } else {
+                        self.resolveCameraCapture(requestId: requestId, payload: nil, error: "permission_denied")
+                    }
+                }
+            }
             return
         }
 
+        guard authStatus == .authorized else {
+            let error = authStatus == .denied || authStatus == .restricted
+                ? "permission_permanently_denied"
+                : "permission_denied"
+            resolveCameraCapture(requestId: requestId, payload: nil, error: error)
+            return
+        }
+
+        presentCameraPicker(requestId: requestId)
+    }
+
+    private func presentCameraPicker(requestId: String) {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.cameraCaptureMode = .photo
@@ -367,7 +401,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
     }
 
     private func resolveCameraPermission(requestId: String, outcome: String) {
-        let encodedId = jsQuote(requestId)
+        let encodedId = JsStringEncoding.quote(requestId)
         let payload = (try? JSONSerialization.data(withJSONObject: ["outcome": outcome]))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{\"outcome\":\"permission_denied\"}"
         evaluateJavaScript("window.__guavasureResolveCameraPermission(\(encodedId), \(payload));")
@@ -378,7 +412,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
         payload: [String: String]?,
         error: String?
     ) {
-        let encodedId = jsQuote(requestId)
+        let encodedId = JsStringEncoding.quote(requestId)
         if let payload,
            let data = try? JSONSerialization.data(withJSONObject: payload),
            let json = String(data: data, encoding: .utf8) {
@@ -400,14 +434,6 @@ public final class GuavaSureEmbedViewController: UIViewController {
         view.backgroundColor = color
         preferredStatusBar = statusBarStyle.lowercased() == "light" ? .lightContent : .default
         setNeedsStatusBarAppearanceUpdate()
-    }
-
-    private func jsQuote(_ value: String) -> String {
-        if let data = try? JSONSerialization.data(withJSONObject: value),
-           let encoded = String(data: data, encoding: .utf8) {
-            return encoded
-        }
-        return "\"\(value.replacingOccurrences(of: "\"", with: "\\\""))\""
     }
 
     private static let safariMobileUserAgent =

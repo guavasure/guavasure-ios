@@ -37,6 +37,7 @@ embed.configure(
     config: GuavaSureEmbedConfig(
         partnerId: "YOUR_PARTNER_ID",
         environment: .sandbox,
+        enableCameraCapture: true,
         partnerAuthTokenProvider: {
             try await yourBackend.mintCustomerAuthToken(userId: userId)
         }
@@ -56,6 +57,8 @@ embed.loadEmbed()
 <key>NSCameraUsageDescription</key>
 <string>Used to capture pet photos for insurance claims.</string>
 ```
+
+Set `enableCameraCapture: true` in `GuavaSureEmbedConfig` so the embed can open the native camera for nose photos. The SDK requests camera permission when needed.
 
 ## Embed URL
 

@@ -7,7 +7,7 @@ enum ChunkedJsDelivery {
         requestId: String,
         payload: [String: String]?
     ) async {
-        let encodedId = jsQuote(requestId)
+        let encodedId = JsStringEncoding.quote(requestId)
         guard let payload else {
             await evaluate(webView, "window.__guavasureResolveFilePick(\(encodedId), null);")
             return
@@ -51,7 +51,7 @@ enum ChunkedJsDelivery {
                 limitedBy: base64.endIndex
             ) ?? base64.endIndex
             let chunk = String(base64[offset..<end])
-            let encodedChunk = jsQuote(chunk)
+            let encodedChunk = JsStringEncoding.quote(chunk)
             await evaluate(
                 webView,
                 """
@@ -100,14 +100,6 @@ enum ChunkedJsDelivery {
                 continuation.resume()
             }
         }
-    }
-
-    private static func jsQuote(_ value: String) -> String {
-        if let data = try? JSONSerialization.data(withJSONObject: value),
-           let encoded = String(data: data, encoding: .utf8) {
-            return encoded
-        }
-        return "\"\(value.replacingOccurrences(of: "\"", with: "\\\""))\""
     }
 
     private static func jsonString(_ object: [String: String]) -> String? {

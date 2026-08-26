@@ -17,7 +17,7 @@ public struct GuavaSureEmbedConfig: Sendable {
     public let localDevHost: String?
     public let localDevPort: Int
     public let localDevScheme: String
-    /// Opt-in native camera bridge. SDK never prompts — partner must grant `CAMERA` first.
+    /// Opt-in native camera bridge. When enabled, the SDK requests camera access when needed.
     public let enableCameraCapture: Bool
 
     public static let defaultEmbedBaseUrl = "https://embed.guavasure.com"
