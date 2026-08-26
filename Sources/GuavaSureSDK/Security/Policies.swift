@@ -30,7 +30,7 @@ enum EmbedOriginPolicy {
         guard let url, let host = url.host?.lowercased(), let scheme = url.scheme?.lowercased() else {
             return nil
         }
-        let port = url.port ?? defaultPort(scheme)
+        let port = url.port ?? defaultPort(scheme: scheme)
         if isDefaultPort(scheme: scheme, port: port) {
             return "\(scheme)://\(host)"
         }
@@ -48,12 +48,14 @@ enum EmbedOriginPolicy {
 
 enum PaymentUrlPolicy {
     static func isAllowed(_ url: String) -> Bool {
+        if url.contains("\\") { return false }
         guard let components = URLComponents(string: url),
               components.scheme?.lowercased() == "https",
               let host = components.host?.lowercased() else {
             return false
         }
-        if host == "rzp.io" || host == "razorpay.me" { return true }
+        if host == "rzp.io" || host.hasSuffix(".rzp.io") { return true }
+        if host == "razorpay.me" || host.hasSuffix(".razorpay.me") { return true }
         if host == "razorpay.com" || host.hasSuffix(".razorpay.com") { return true }
         return false
     }

@@ -1,7 +1,7 @@
 import Foundation
+import Razorpay
 import SafariServices
 import UIKit
-import RazorpayCheckout
 
 enum PaymentLaunchResult {
     case nativeSuccess(paymentId: String)
@@ -12,7 +12,6 @@ enum PaymentLaunchResult {
 
 @MainActor
 final class PaymentLauncher: NSObject {
-    private weak var presentingViewController: UIViewController?
     private var razorpay: RazorpayCheckout?
     private var nativeCompletion: ((PaymentLaunchResult) -> Void)?
 
@@ -21,13 +20,30 @@ final class PaymentLauncher: NSObject {
         request: OpenPaymentRequest,
         completion: @escaping (PaymentLaunchResult) -> Void
     ) {
-        presentingViewController = viewController
+        let presenter = Self.resolvePresenter(from: viewController)
 
         if request.canOpenNativeCheckout, let key = request.key {
-            launchNative(from: viewController, request: request, key: key, completion: completion)
+            launchNative(from: presenter, request: request, key: key) { result in
+                switch result {
+                case .nativeSuccess, .nativeFailure(_, cancelled: true):
+                    completion(result)
+                case .nativeFailure:
+                    self.launchBrowser(from: presenter, request: request, completion: completion)
+                case .browserOpened, .failed:
+                    completion(result)
+                }
+            }
             return
         }
 
+        launchBrowser(from: presenter, request: request, completion: completion)
+    }
+
+    private func launchBrowser(
+        from viewController: UIViewController,
+        request: OpenPaymentRequest,
+        completion: @escaping (PaymentLaunchResult) -> Void
+    ) {
         guard PaymentUrlPolicy.isAllowed(request.url), let url = URL(string: request.url) else {
             completion(.failed)
             return
@@ -51,10 +67,11 @@ final class PaymentLauncher: NSObject {
         }
 
         nativeCompletion = completion
-        let razorpay = RazorpayCheckout.initWithKey(key, andDelegate: self)
+        let razorpay = RazorpayCheckout.initWithKey(key, andDelegateWithData: self)
         self.razorpay = razorpay
 
         var options: [String: Any] = [
+            "key": key,
             "name": request.name ?? "GuavaSure",
             "currency": request.currency ?? "INR",
             "theme": ["color": "#E85A4F"],
@@ -70,7 +87,10 @@ final class PaymentLauncher: NSObject {
         if let contact = request.prefillContact { prefill["contact"] = contact }
         if !prefill.isEmpty { options["prefill"] = prefill }
 
-        razorpay.open(options, displayController: viewController)
+        // Child embed VCs must pass an ancestor in the window hierarchy (see razorpay-pod example).
+        DispatchQueue.main.async {
+            razorpay.open(options, displayController: viewController)
+        }
     }
 
     private func finishNative(_ result: PaymentLaunchResult) {
@@ -78,9 +98,25 @@ final class PaymentLauncher: NSObject {
         nativeCompletion = nil
         razorpay = nil
     }
+
+    private static func resolvePresenter(from viewController: UIViewController) -> UIViewController {
+        var current = viewController
+        while let parent = current.parent {
+            current = parent
+        }
+        if let navigationController = current.navigationController {
+            current = navigationController
+        } else if let tabBarController = current.tabBarController {
+            current = tabBarController
+        }
+        while let presented = current.presentedViewController {
+            current = presented
+        }
+        return current
+    }
 }
 
-extension PaymentLauncher: RazorpayPaymentCompletionProtocol {
+extension PaymentLauncher: RazorpayPaymentCompletionProtocolWithData {
     nonisolated func onPaymentSuccess(_ payment_id: String, andData response: [AnyHashable: Any]?) {
         Task { @MainActor in
             finishNative(.nativeSuccess(paymentId: payment_id))
@@ -89,7 +125,8 @@ extension PaymentLauncher: RazorpayPaymentCompletionProtocol {
 
     nonisolated func onPaymentError(_ code: Int32, description str: String, andData response: [AnyHashable: Any]?) {
         Task { @MainActor in
-            let cancelled = code == 2
+            let cancelled = code == 2 &&
+                str.localizedCaseInsensitiveContains("cancel")
             finishNative(.nativeFailure(message: str, cancelled: cancelled))
         }
     }

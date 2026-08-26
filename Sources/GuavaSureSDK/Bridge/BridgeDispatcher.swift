@@ -98,8 +98,10 @@ final class BridgeDispatcher {
                 callbacks.onPickFile(requestId, accept)
             }
         case BridgeConstants.openPayment:
-            if let url = json["url"] as? String, !url.isEmpty {
-                callbacks.onOpenPayment(parseOpenPayment(json, url: url))
+            let url = (json["url"] as? String) ?? ""
+            let request = parseOpenPayment(json, url: url)
+            if !url.isEmpty || request.canOpenNativeCheckout {
+                callbacks.onOpenPayment(request)
             }
         case BridgeConstants.guavasurePayment where event == BridgeConstants.collectPayment:
             guard let payload = json["data"] as? [String: Any],
@@ -136,7 +138,7 @@ final class BridgeDispatcher {
             orderId: json["orderId"] as? String,
             subscriptionId: json["subscriptionId"] as? String,
             key: json["key"] as? String,
-            amountPaise: json["amountPaise"] as? Int,
+            amountPaise: intValue(json["amountPaise"]),
             currency: json["currency"] as? String,
             name: json["name"] as? String,
             description: json["description"] as? String,
@@ -144,6 +146,19 @@ final class BridgeDispatcher {
             prefillEmail: prefill?["email"] as? String,
             prefillContact: prefill?["contact"] as? String
         )
+    }
+
+    private func intValue(_ value: Any?) -> Int? {
+        switch value {
+        case let int as Int:
+            return int
+        case let number as NSNumber:
+            return number.intValue
+        case let double as Double:
+            return Int(double)
+        default:
+            return nil
+        }
     }
 
     func buildPaymentConfirmedScript(intentId: String, quoteId: String) -> String {
