@@ -4,10 +4,10 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-/// Main embed view controller — mirrors `guavasure_flutter` / Android SDK.
+/// Main embed view controller - mirrors `guavasure_flutter` / Android SDK.
 @MainActor
 public final class GuavaSureEmbedViewController: UIViewController {
-    private lazy var webView: WKWebView = makeWebView()
+    private var webView: WKWebView!
     private let progressView = UIProgressView(progressViewStyle: .bar)
     private let bridgeDispatcher = BridgeDispatcher()
     private let paymentLauncher = PaymentLauncher()
@@ -17,6 +17,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
     private var callbacks = GuavaSureEmbedCallbacks()
     private var allowedOrigins: Set<String> = []
     private var bridgeOriginTrusted = false
+    private var adoptedWarmupSession: GuavaSureEmbedWarmupSession?
     private var awaitingBrowserPayment = false
     private var paymentOpenedAt: Date?
     private var collectPaymentInFlight = false
@@ -37,7 +38,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if isBeingDismissed || isMovingFromParent {
+        if isBeingDismissed || isMovingFromParent, webView != nil {
             webView.configuration.userContentController.removeScriptMessageHandler(
                 forName: BridgeConstants.channelName
             )
@@ -59,10 +60,28 @@ public final class GuavaSureEmbedViewController: UIViewController {
         allowedOrigins = EmbedOriginPolicy.resolveAllowedOrigins(config: config)
     }
 
+    /// Optional preload before presenting this controller. Use the same config as [configure].
+    public static func warmup(config: GuavaSureEmbedConfig) {
+        GuavaSureEmbedWarmup.warmup(config: config)
+    }
+
+    /// Clears any warmup session (for example on partner logout).
+    public static func cancelWarmup() {
+        GuavaSureEmbedWarmup.cancel()
+    }
+
     public func loadEmbed() {
         Task {
             do {
                 guard let config else { return }
+                if let warmed = GuavaSureEmbedWarmup.claimIfMatching(config: config) {
+                    warmed.onLoadError = { [weak self] message in
+                        self?.callbacks.onLoadError?(message)
+                    }
+                    adoptWarmupSession(warmed)
+                    return
+                }
+                loadViewIfNeeded()
                 let token = try await resolvePartnerAuthToken(config: config)
                 let urlString = GuavaSureUrlBuilder.buildEmbedUrl(config: config, partnerAuthToken: token)
                 guard let url = URL(string: urlString) else { return }
@@ -90,9 +109,17 @@ public final class GuavaSureEmbedViewController: UIViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
+        if webView == nil {
+            webView = makeWebView()
+        } else if bridgeScriptHandler == nil {
+            let handler = BridgeScriptMessageHandler(owner: self)
+            bridgeScriptHandler = handler
+            webView.configuration.userContentController.add(handler, name: BridgeConstants.channelName)
+        }
         setupWebView()
         setupBridge()
         layoutViews()
+        adoptedWarmupSession = nil
     }
 
     public override func viewDidAppear(_ animated: Bool) {
@@ -177,6 +204,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
         }
 
         bridgeDispatcher.callbacks.onLogout = { [weak self] in
+            GuavaSureEmbedWarmup.cancel()
             Task { await self?.callbacks.onLogout?() }
         }
 
@@ -208,6 +236,51 @@ public final class GuavaSureEmbedViewController: UIViewController {
         if let body = message.body as? String { return body }
         if let body = message.body as? NSString { return body as String }
         return nil
+    }
+
+    private func adoptWarmupSession(_ warmed: GuavaSureEmbedWarmupSession) {
+        progressObservation?.invalidate()
+
+        if isViewLoaded {
+            webView.configuration.userContentController.removeScriptMessageHandler(
+                forName: BridgeConstants.channelName
+            )
+            webView.removeFromSuperview()
+        }
+
+        webView = warmed.webView
+        bridgeOriginTrusted = warmed.bridgeOriginTrusted
+        adoptedWarmupSession = warmed
+
+        if isViewLoaded {
+            layoutWebViewInHierarchy()
+            setupWebView()
+            let handler = BridgeScriptMessageHandler(owner: self)
+            bridgeScriptHandler = handler
+            webView.configuration.userContentController.add(handler, name: BridgeConstants.channelName)
+            adoptedWarmupSession = nil
+        }
+
+        for message in warmed.queuedMessages {
+            bridgeDispatcher.dispatch(message)
+        }
+        warmed.queuedMessages.removeAll()
+
+        if warmed.loadFinished {
+            BridgeInjection.reinject(into: webView)
+            progressView.isHidden = true
+        }
+    }
+
+    private func layoutWebViewInHierarchy() {
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
     }
 
     private func layoutViews() {

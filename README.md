@@ -2,7 +2,7 @@
 
 Swift Package that embeds the hosted GuavaSure insurance flow in `WKWebView` and implements `GuavasureBridge` for native Razorpay Checkout, file pick, camera capture, and partner auth.
 
-**Full integration guide:** [partners.guavasure.com — iOS SDK](https://partners.guavasure.com/integration/docs/integrations/ios-sdk)
+**Full integration guide:** [partners.guavasure.com - iOS SDK](https://partners.guavasure.com/integration/docs/integrations/ios-sdk)
 
 ## Features
 
@@ -14,6 +14,7 @@ Same bridge protocol as the Android SDK and [`guavasure_flutter`](https://pub.de
 - No embed reload on Safari return (embed polls in background)
 - File pick, logout, go-back callbacks
 - Optional partner-collected payment handler
+- Optional embed warmup via `GuavaSureEmbedViewController.warmup(config:)`
 
 ## Quick start
 
@@ -21,7 +22,7 @@ Same bridge protocol as the Android SDK and [`guavasure_flutter`](https://pub.de
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/guavasure/guavasure-ios.git", from: "1.0.1"),
+    .package(url: "https://github.com/guavasure/guavasure-ios.git", from: "1.0.4"),
 ],
 ```
 
@@ -71,7 +72,7 @@ https://embed.guavasure.com?partner=...&env=sandbox&platform=app-webview&partner
 | Path                            | On success                              |
 | ------------------------------- | --------------------------------------- |
 | Native Razorpay SDK             | Embed keeps polling and advances flow   |
-| SFSafariViewController fallback | No reload — embed polling advances flow |
+| SFSafariViewController fallback | No reload - embed polling advances flow |
 
 ## Requirements
 
