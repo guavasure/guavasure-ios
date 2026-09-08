@@ -17,6 +17,7 @@ enum GuavaSureEmbedWarmupKey {
         let authToken = config.partnerAuthToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let env = config.environment == .sandbox ? "sandbox" : "production"
         let camera = config.enableCameraCapture ? "1" : "0"
+        let themeConfigId = config.themeConfigId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return [
             config.partnerId,
             env,
@@ -25,6 +26,7 @@ enum GuavaSureEmbedWarmupKey {
             externalId,
             authToken,
             camera,
+            themeConfigId,
         ].joined(separator: "|")
     }
 }

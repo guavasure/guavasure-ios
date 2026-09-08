@@ -20,6 +20,10 @@ enum GuavaSureUrlBuilder {
            !externalId.isEmpty {
             params["partner-external-id"] = externalId
         }
+        if let themeConfigId = config.themeConfigId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !themeConfigId.isEmpty {
+            params["theme-config-id"] = themeConfigId
+        }
         if config.enableCameraCapture {
             params["enable-camera-capture"] = "true"
         }
