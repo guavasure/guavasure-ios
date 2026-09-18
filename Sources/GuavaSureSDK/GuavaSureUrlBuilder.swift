@@ -27,6 +27,9 @@ enum GuavaSureUrlBuilder {
         if config.enableCameraCapture {
             params["enable-camera-capture"] = "true"
         }
+        if config.claimMode {
+            params["claim-mode"] = "true"
+        }
 
         if let host = config.localDevHost?.trimmingCharacters(in: .whitespacesAndNewlines), !host.isEmpty {
             var components = URLComponents()

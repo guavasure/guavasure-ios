@@ -21,6 +21,8 @@ public struct GuavaSureEmbedConfig: Sendable {
     public let enableCameraCapture: Bool
     /// Alternate partner customization from Embed → Theme configs (`theme-config-id` URL param).
     public let themeConfigId: String?
+    /// When true, the embed URL includes `claim-mode=true` so home is a claims-focused Policy Details screen.
+    public let claimMode: Bool
 
     public static let defaultEmbedBaseUrl = "https://embed.guavasure.com"
     public static let appWebviewPlatform = "app-webview"
@@ -38,7 +40,8 @@ public struct GuavaSureEmbedConfig: Sendable {
         localDevPort: Int = 5173,
         localDevScheme: String = "http",
         enableCameraCapture: Bool = false,
-        themeConfigId: String? = nil
+        themeConfigId: String? = nil,
+        claimMode: Bool = false
     ) {
         self.partnerId = partnerId
         self.environment = environment
@@ -53,6 +56,7 @@ public struct GuavaSureEmbedConfig: Sendable {
         self.localDevScheme = localDevScheme
         self.enableCameraCapture = enableCameraCapture
         self.themeConfigId = themeConfigId
+        self.claimMode = claimMode
     }
 }
 

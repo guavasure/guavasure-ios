@@ -42,6 +42,7 @@ embed.configure(
         partnerAuthTokenProvider: {
             try await yourBackend.mintCustomerAuthToken(userId: userId)
         }
+        // Optional: claimMode: true for Policy Details home
     ),
     callbacks: GuavaSureEmbedCallbacks(
         onLogout: { await dismissEmbed() },
