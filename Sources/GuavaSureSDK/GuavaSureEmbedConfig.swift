@@ -8,7 +8,11 @@ public enum GuavaSureEnvironment: String, Sendable {
 public struct GuavaSureEmbedConfig: Sendable {
     public let partnerId: String
     public let environment: GuavaSureEnvironment
-    public let partnerAuthToken: String?
+    /// Static JWT fallback. Prefer `partnerAuthTokenProvider`.
+    @available(*, deprecated, message: "Use partnerAuthTokenProvider instead. Static tokens are one-use and short-lived; the SDK will not mint a fresh JWT on warmup or reload.")
+    public var partnerAuthToken: String? { fallbackPartnerAuthToken }
+    /// Fallback JWT when `partnerAuthTokenProvider` is nil.
+    let fallbackPartnerAuthToken: String?
     public let partnerAuthTokenProvider: (@Sendable () async throws -> String?)?
     public let partnerExternalId: String?
     public let embedBaseUrl: String
@@ -27,6 +31,7 @@ public struct GuavaSureEmbedConfig: Sendable {
     public static let defaultEmbedBaseUrl = "https://embed.guavasure.com"
     public static let appWebviewPlatform = "app-webview"
 
+    /// - Parameter partnerAuthToken: Deprecated. Use `partnerAuthTokenProvider` instead.
     public init(
         partnerId: String,
         environment: GuavaSureEnvironment = .production,
@@ -45,7 +50,7 @@ public struct GuavaSureEmbedConfig: Sendable {
     ) {
         self.partnerId = partnerId
         self.environment = environment
-        self.partnerAuthToken = partnerAuthToken
+        self.fallbackPartnerAuthToken = partnerAuthToken
         self.partnerAuthTokenProvider = partnerAuthTokenProvider
         self.partnerExternalId = partnerExternalId
         self.embedBaseUrl = embedBaseUrl

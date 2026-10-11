@@ -304,7 +304,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
         if let provider = config.partnerAuthTokenProvider {
             return try await provider()
         }
-        return config.partnerAuthToken
+        return config.fallbackPartnerAuthToken
     }
 
     private func handleResumeFromBrowserPayment() {

@@ -14,7 +14,7 @@ enum GuavaSureEmbedWarmupKey {
             origin = config.embedBaseUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         let externalId = config.partnerExternalId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let authToken = config.partnerAuthToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let authToken = config.fallbackPartnerAuthToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let env = config.environment == .sandbox ? "sandbox" : "production"
         let camera = config.enableCameraCapture ? "1" : "0"
         let themeConfigId = config.themeConfigId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -253,7 +253,7 @@ enum GuavaSureEmbedWarmup {
         if let provider = config.partnerAuthTokenProvider {
             return try await provider()
         }
-        return config.partnerAuthToken
+        return config.fallbackPartnerAuthToken
     }
 
     private static let safariMobileUserAgent =
