@@ -19,6 +19,9 @@ enum GuavaSureUrlBuilder {
         if let externalId = config.partnerExternalId?.trimmingCharacters(in: .whitespacesAndNewlines),
            !externalId.isEmpty {
             params["partner-external-id"] = externalId
+            if !config.lockPet {
+                params["partner-pet-lock"] = "false"
+            }
         }
         if let themeConfigId = config.themeConfigId?.trimmingCharacters(in: .whitespacesAndNewlines),
            !themeConfigId.isEmpty {
@@ -29,6 +32,9 @@ enum GuavaSureUrlBuilder {
         }
         if config.claimMode {
             params["claim-mode"] = "true"
+        }
+        if let theme = config.theme {
+            params["theme"] = theme.rawValue
         }
 
         if let host = config.localDevHost?.trimmingCharacters(in: .whitespacesAndNewlines), !host.isEmpty {

@@ -22,7 +22,7 @@ Same bridge protocol as the Android SDK and [`guavasure_flutter`](https://pub.de
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/guavasure/guavasure-ios.git", from: "1.0.4"),
+    .package(url: "https://github.com/guavasure/guavasure-ios.git", from: "1.0.8"),
 ],
 ```
 

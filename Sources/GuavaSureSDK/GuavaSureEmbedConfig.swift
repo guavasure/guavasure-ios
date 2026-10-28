@@ -5,6 +5,15 @@ public enum GuavaSureEnvironment: String, Sendable {
     case sandbox
 }
 
+/// Embed colour scheme, sent as the `theme` URL param.
+///
+/// `.dark` uses the partner's dark theme when GuavaSure has enabled one for the partner and it is
+/// switched on in the Partner Dashboard; otherwise the embed stays light.
+public enum GuavaSureTheme: String, Sendable {
+    case light
+    case dark
+}
+
 public struct GuavaSureEmbedConfig: Sendable {
     public let partnerId: String
     public let environment: GuavaSureEnvironment
@@ -27,6 +36,13 @@ public struct GuavaSureEmbedConfig: Sendable {
     public let themeConfigId: String?
     /// When true, the embed URL includes `claim-mode=true` so home is a claims-focused Policy Details screen.
     public let claimMode: Bool
+    /// Whether `partnerExternalId` locks the embed to that pet. When false, the embed URL includes
+    /// `partner-pet-lock=false`: the pet is selected initially, other pets stay visible and the
+    /// customer can switch. Ignored when `partnerExternalId` is unset.
+    public let lockPet: Bool
+    /// Embed colour scheme (`theme` URL param). Pass `.dark` when your app is in dark mode.
+    /// Nil sends no param and the embed shows the light theme.
+    public let theme: GuavaSureTheme?
 
     public static let defaultEmbedBaseUrl = "https://embed.guavasure.com"
     public static let appWebviewPlatform = "app-webview"
@@ -46,7 +62,9 @@ public struct GuavaSureEmbedConfig: Sendable {
         localDevScheme: String = "http",
         enableCameraCapture: Bool = false,
         themeConfigId: String? = nil,
-        claimMode: Bool = false
+        claimMode: Bool = false,
+        lockPet: Bool = true,
+        theme: GuavaSureTheme? = nil
     ) {
         self.partnerId = partnerId
         self.environment = environment
@@ -62,6 +80,8 @@ public struct GuavaSureEmbedConfig: Sendable {
         self.enableCameraCapture = enableCameraCapture
         self.themeConfigId = themeConfigId
         self.claimMode = claimMode
+        self.lockPet = lockPet
+        self.theme = theme
     }
 }
 

@@ -108,7 +108,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = config?.theme?.initialBackgroundColor ?? .systemBackground
         if webView == nil {
             webView = makeWebView()
         } else if bridgeScriptHandler == nil {
@@ -150,6 +150,7 @@ public final class GuavaSureEmbedViewController: UIViewController {
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = Self.safariMobileUserAgent
+        GuavaSureTheme.applyInitialBackground(config?.theme, to: webView)
         return webView
     }
 

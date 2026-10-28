@@ -19,6 +19,8 @@ enum GuavaSureEmbedWarmupKey {
         let camera = config.enableCameraCapture ? "1" : "0"
         let themeConfigId = config.themeConfigId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let claimMode = config.claimMode ? "1" : "0"
+        let lockPet = config.lockPet ? "1" : "0"
+        let theme = config.theme?.rawValue ?? ""
         return [
             config.partnerId,
             env,
@@ -29,6 +31,8 @@ enum GuavaSureEmbedWarmupKey {
             camera,
             themeConfigId,
             claimMode,
+            lockPet,
+            theme,
         ].joined(separator: "|")
     }
 }
@@ -186,6 +190,7 @@ enum GuavaSureEmbedWarmup {
             allowedOrigins: allowedOrigins
         )
         warmupSession.webView.customUserAgent = safariMobileUserAgent
+        GuavaSureTheme.applyInitialBackground(config.theme, to: warmupSession.webView)
         handler.session = warmupSession
         warmupSession.scriptHandler = handler
 
